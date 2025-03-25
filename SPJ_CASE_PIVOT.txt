@@ -1,0 +1,71 @@
+– SPJ Method –
+SELECT driver_id, SUM (points_scored) AS GPAus_points
+INTO #GPAustralia
+FROM RaceResultTable
+WHERE race_id = 3086
+GROUP BY driver_id;
+GO
+SELECT driver_id, SUM (points_scored) AS GPGB_points
+INTO #GPGreatBritain
+FROM RaceResultTable
+WHERE race_id = 3249
+GROUP BY driver_id;
+GO
+SELECT driver_id, SUM (points_scored) AS GPJa_points
+INTO #GPJapan
+FROM RaceResultTable
+WHERE race_id = 3390
+GROUP BY driver_id;
+GO
+SELECT driver_id, SUM (points_scored) AS GPMon_points
+INTO #GPMonaco
+FROM RaceResultTable
+WHERE race_id = 3522
+GROUP BY driver_id;
+GO
+– Join Tables –
+SELECT 
+COALESCE(R1.driver_id, COALESCE(R2.driveR_id, COALESCE(R3.driver_id, R4.driver_id))) AS driver_id,
+COALESCE (R1.GPAus_points, NULL) AS GPAus_points,
+COALESCE (R2.GPGB_points, NULL) AS GPGB_points,
+COALESCE (R3.GPJa_points, NULL) AS GPJa_points,
+COALESCE (R4.GPMon_points, NULL) AS GPMon_points
+FROM #GPAustralia R1
+FULL OUTER JOIN #GPGreatBritain R2 ON R1.driver_id = R2.driver_id
+FULL OUTER JOIN #GPJapan R3 ON COALESCE (R1.driver_id, R2.driver_id) = R3.driver_id
+FULL OUTER JOIN #GPMonaco R4 ON COALESCE (R1. driver_id, COALESCE(R2.driver_id, R3.driver_id)) = R4.driver_id;
+GO
+
+– Case Method –
+SELECT
+	driver_id,
+	SUM(CASE WHEN race_id = 3086 THEN points_scored ELSE NULL END) AS GPAus_Points,
+	SUM(CASE WHEN race_id = 3249 THEN points_scored ELSE NULL END) AS GPGB_Points,
+	SUM(CASE WHEN race_id = 3390 THEN points_scored ELSE NULL END) AS GPJa_Points,
+	SUM(CASE WHEN race_id = 3522 THEN points_scored ELSE NULL END) AS GPMon_Points
+FROM RaceResultTable
+GROUP BY driver_id;
+
+– Pivot Method –
+SELECT driver_id,
+	[3086] AS GPAus_Points,
+	[3249] AS GPGB_Points,
+	[3390] AS GPJa_Points,
+	[3522] AS GPMon_Points
+FROM (
+	SELECT driver_id, race_id, points_scored
+	FROM RaceResultTable
+) src
+PIVOT (
+	SUM(points_scored)
+FOR race_id IN ([3086], [3249], [3390], [3522])
+) AS PivotTable;
+GO
+
+
+--Table Drop SPJ --
+DROP TABLE IF EXISTS #GPAustralia;
+DROP TABLE IF EXISTS #GPGreatBritain;
+DROP TABLE IF EXISTS #GPJapan;
+DROP TABLE IF EXISTS #GPMonaco;
+GO
